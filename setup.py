@@ -19,14 +19,14 @@ setup(
         "pytz~=2024.1"
     ],
     extras_require={
-        "testing": [
+        "test": [
             "pluggy~=1.5",
             "pylint~=3.2",
             "pytest~=8.2",
             "pytest-mock~=3.14"
         ],
     },
-    python_requires=">=3.11",
+    python_requires=">=3.10",
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",

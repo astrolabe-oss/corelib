@@ -15,3 +15,7 @@ test:
 test_env_up:
 	@echo "Starting Neo4j container..."
 	$(DOCKER_COMPOSE) up -d
+
+lint:
+	pylint corelib
+	pylint tests
