@@ -65,12 +65,12 @@ class Insights(PlatDBNode):
     analogue of an auto_increment field. For a direct MySQL 'id' 
     equivalent, you can use an IntegerProperty and manage it manually.
     """
-    attributeName = StringProperty(required=True)
+    attribute_mame = StringProperty(required=True)
     recommendation = StringProperty(required=True)
-    startingState = StringProperty(required=True)
-    upgradedState = StringProperty(required=True)
-    minImprovement = FloatProperty()
-    maxImprovement = FloatProperty()
+    starting_state = StringProperty(required=True)
+    upgraded_state = StringProperty(required=True)
+    min_improvement = FloatProperty()
+    max_improvement = FloatProperty()
     note = StringProperty()
 
     # Automatically set to current date & time when created
@@ -84,7 +84,7 @@ class Insights(PlatDBNode):
 
     def save(self, *args, **kwargs):
         # Update the 'updated' property to current time when saving
-        self.updated = datetime.datetime.now(datetime.UTC)
+        self.updated = datetime.datetime.now(datetime.timezone.utc)
         return super().save(*args, **kwargs)
 
 class Repo(PlatDBNode):
