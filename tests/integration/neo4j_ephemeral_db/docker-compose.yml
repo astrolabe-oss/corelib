@@ -8,3 +8,4 @@ services:
       - NEO4J_AUTH=neo4j/guruai11
     ports:
       - "7687:7687"
+      - "7474:7474" # Port is for Neo4j UI in web browser

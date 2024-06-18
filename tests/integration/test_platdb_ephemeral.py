@@ -26,15 +26,15 @@ params = [
     }),
     (EgressController, {"name": "egress1"}, {"name": "new_egress1"}),
     (Insights, {
-        "attributeName": "attr1",
+        "attribute_name": "attr1",
         "recommendation": "recommendation1",
-        "startingState": "state1",
-        "upgradedState": "state2"
+        "starting_state": "state1",
+        "upgraded_state": "state2"
     }, {
-        "attributeName": "new_attr1",
+        "attribute_name": "new_attr1",
         "recommendation": "new_recommendation1",
-        "startingState": "new_state1",
-        "upgradedState": "new_state2"
+        "starting_state": "new_state1",
+        "upgraded_state": "new_state2"
     }),
     (Repo, {"name": "repo1"}, {"name": "new_repo1"}),
     (Resource, {"name": "resource1"}, {"name": "new_resource1"}),

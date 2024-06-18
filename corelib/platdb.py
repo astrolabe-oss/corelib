@@ -7,6 +7,32 @@ from neomodel import (db, DoesNotExist, DateTimeProperty, FloatProperty,
                       RelationshipFrom, RelationshipTo, StringProperty,
                       StructuredNode)
 
+class Neo4jConnection:
+    def __init__(self, uri: str, auth: tuple[str, str]):
+        self._uri = uri
+        self._auth = auth
+
+        self._driver = None
+
+    def __enter__(self):
+        self.open()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+    def open(self):
+        self._driver = GraphDatabase.driver(self._uri, auth=self._auth)
+        db.set_connection(self._uri, self._driver)
+
+        # Clear sensitive information
+        self._auth = None
+
+        return self
+
+    def close(self):
+        self._driver.close()
+
 class PlatDBNode(StructuredNode):
     @classmethod
     def delete_by_attributes(cls, attributes: dict) -> bool:
@@ -65,7 +91,7 @@ class Insights(PlatDBNode):
     analogue of an auto_increment field. For a direct MySQL 'id' 
     equivalent, you can use an IntegerProperty and manage it manually.
     """
-    attribute_mame = StringProperty(required=True)
+    attribute_name = StringProperty(required=True)
     recommendation = StringProperty(required=True)
     starting_state = StringProperty(required=True)
     upgraded_state = StringProperty(required=True)
@@ -99,29 +125,3 @@ class TrafficControllers(PlatDBNode):
     access_names = StringProperty()
     deployments = RelationshipTo('Deployments', 'DEPENDS_ON')
     applications = RelationshipFrom('Application', 'PROVIDE')
-
-class Neo4jConnection:
-    def __init__(self, uri: str, auth: tuple[str, str]):
-        self._uri = uri
-        self._auth = auth
-
-        self._driver = None
-
-    def __enter__(self):
-        self.open()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
-
-    def open(self):
-        self._driver = GraphDatabase.driver(self._uri, auth=self._auth)
-        db.set_connection(self._uri, self._driver)
-
-        # Clear sensitive information
-        self._auth = None
-
-        return self
-
-    def close(self):
-        self._driver.close()
