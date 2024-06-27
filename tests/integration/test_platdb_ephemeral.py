@@ -3,8 +3,8 @@ import pytest
 from neomodel import db
 
 from corelib.platdb import (Neo4jConnection, Application, CDN, Compute,
-                                  Deployments, EgressController, Insights, Repo,
-                                  Resource, TrafficControllers)
+                            Deployments, EgressController, Insights, Repo,
+                            Resource, TrafficControllers)
 
 # Neo4jConnection seem like they are unused arguments but they are the
 # DB connection objects that were yielded to the function.
@@ -18,7 +18,13 @@ from corelib.platdb import (Neo4jConnection, Application, CDN, Compute,
 params = [
     (Application, {"name": "app1"}, {"name": "new_app1"}),
     (CDN, {"name": "cdn1"}, {"name": "new_cdn1"}),
-    (Compute, {"name": "compute1"}, {"name": "new_compute1"}),
+    (Compute, {
+        "name": "compute1",
+        "platform" : "ec2"
+    }, {
+        "name": "new_compute1", 
+        "platform" : "k8s"
+    }),
     (Deployments, {
         "deployment_type": "auto_scaling_group"
     }, {

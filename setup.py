@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="corelib",
-    version="0.0.1",
+    version="0.1.0",
     description="Library for interacting with Neo4j DB.",
     long_description=None,
     long_description_content_type=None,

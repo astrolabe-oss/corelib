@@ -4,8 +4,8 @@ from typing import Optional
 
 from neo4j import GraphDatabase
 from neomodel import (db, DoesNotExist, DateTimeProperty, FloatProperty,
-                      RelationshipFrom, RelationshipTo, StringProperty,
-                      StructuredNode)
+                      RegexProperty, RelationshipFrom, RelationshipTo, 
+                      StringProperty, StructuredNode)
 
 class Neo4jConnection:
     def __init__(self, uri: str, auth: tuple[str, str]):
@@ -58,21 +58,29 @@ class PlatDBNode(StructuredNode):
             return None
 
 class Application(PlatDBNode):
-    name = StringProperty()
-    resources = RelationshipTo('Resource', 'USES')
-    insights = RelationshipFrom('Insights', 'APPLIES_TO')
-    egress_controller = RelationshipTo('EgressController', 'DEPENDS_ON')
-    traffic_controllers = RelationshipTo('TrafficControllers', 'DEPENDS_ON')
+    name = StringProperty(unique_index=True)
+
+    application_to = RelationshipTo('Application', 'CALLS')
+    application_from = RelationshipFrom('Application', 'CALLED_BY')
     compute = RelationshipFrom('Compute', 'RUNS')
+    egress_controller = RelationshipTo('EgressController', 'DEPENDS_ON')
+    insights = RelationshipFrom('Insights', 'APPLIES_TO')
     repo = RelationshipFrom('Repo', 'STORES')
+    resources = RelationshipTo('Resource', 'USES')
+    traffic_controllers = RelationshipTo('TrafficControllers', 'DEPENDS_ON')
 
 class CDN(PlatDBNode):
     name = StringProperty()
     traffic_controllers = RelationshipTo('TrafficControllers', 'DEPENDS_ON')
 
 class Compute(PlatDBNode):
-    name = StringProperty()
+    name = StringProperty(required=True)
+    platform = StringProperty(required=True)
+
+    address = StringProperty()
     applications = RelationshipTo('Application', 'RUNS')
+    compute_to = RelationshipTo('Compute', 'CALLS')
+    compute_from = RelationshipFrom('Compute', 'CALLED_BY')
 
 class Deployments(PlatDBNode):
     deployment_type = StringProperty(choices={
