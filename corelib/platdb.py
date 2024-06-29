@@ -4,8 +4,8 @@ from typing import Optional
 
 from neo4j import GraphDatabase
 from neomodel import (db, DoesNotExist, DateTimeProperty, FloatProperty,
-                      RegexProperty, RelationshipFrom, RelationshipTo, 
-                      StringProperty, StructuredNode)
+                      RelationshipFrom, RelationshipTo, StringProperty,
+                      StructuredNode)
 
 class Neo4jConnection:
     def __init__(self, uri: str, auth: tuple[str, str]):
@@ -34,6 +34,8 @@ class Neo4jConnection:
         self._driver.close()
 
 class PlatDBNode(StructuredNode):
+    __abstract_node__ = True  # prevents neo4j from adding `PlatDBNode` as a "label" in the graph db
+
     @classmethod
     def delete_by_attributes(cls, attributes: dict) -> bool:
         try:
