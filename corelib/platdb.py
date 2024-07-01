@@ -76,10 +76,12 @@ class CDN(PlatDBNode):
     traffic_controllers = RelationshipTo('TrafficControllers', 'DEPENDS_ON')
 
 class Compute(PlatDBNode):
-    name = StringProperty(required=True)
     platform = StringProperty(required=True)
+    address = StringProperty(required=True)
+    protocol = StringProperty(required=True)
+    protocol_multiplexor = StringProperty(required=True)
 
-    address = StringProperty()
+    name = StringProperty()
     applications = RelationshipTo('Application', 'RUNS')
     compute_to = RelationshipTo('Compute', 'CALLS')
     compute_from = RelationshipFrom('Compute', 'CALLED_BY')

@@ -19,11 +19,16 @@ params = [
     (Application, {"name": "app1"}, {"name": "new_app1"}),
     (CDN, {"name": "cdn1"}, {"name": "new_cdn1"}),
     (Compute, {
-        "name": "compute1",
-        "platform" : "ec2"
+        "platform" : "ec2",
+        "address" : "1.2.3.4",
+        "protocol" : "TCP",
+        "protocol_multiplexor" : "80"
     }, {
-        "name": "new_compute1", 
-        "platform" : "k8s"
+        "name": "new_compute1",
+        "platform" : "k8s",
+        "address" : "pod-1234nv",
+        "protocol" : "HTTP",
+        "protocol_multiplexor" : "80"
     }),
     (Deployments, {
         "deployment_type": "auto_scaling_group"
