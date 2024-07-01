@@ -4,28 +4,37 @@ DOCKER_COMPOSE=docker-compose \
 	-f tests/integration/neo4j_ephemeral_db/docker-compose.yml
 PYTEST=pytest
 
-test: unit_tests integration_tests
+lint:
+	@pylint corelib/
+
+lint_tests:
+	@pylint tests/
+
+lint_all: lint lint_tests
+
+coverage:
+	$(PYTEST) --cov --cov-config .coveragerc ./tests/unit
+
+test: unit_tests 
+	@echo "NOTE test only runs unit tests."
 
 unit_tests:
 	$(PYTEST) tests/unit
-
-integration_tests:
-	@echo "Starting Neo4j container..."
-	$(DOCKER_COMPOSE) up -d
-	@echo "Running tests..."
-	$(PYTEST) tests/integration
-	@echo "Tests finished. Tearing down Neo4j container..."
-	$(DOCKER_COMPOSE) down
 
 test_env_up:
 	@echo "Starting Neo4j container..."
 	$(DOCKER_COMPOSE) up -d
 
-lint: lint_corelib lint_tests
+test_env_down:
+	@echo "Stopping Neo4j container..."
+	$(DOCKER_COMPOSE) down 
 
-lint_corelib:
-	pylint corelib
+integration_tests:
+	@if [ -z "$($(DOCKER_COMPOSE) ps -q neo4j)" ]; then \
+		echo "Neo4j container is not running..."; \
+		echo "Turn it on with 'make test_env_up'"; \
+		exit 1; \
+	fi; \
 
-lint_tests:
-	pylint tests
-
+	@echo "Running tests..."
+	$(PYTEST) tests/integration

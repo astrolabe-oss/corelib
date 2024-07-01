@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="corelib",
-    version="0.1.0",
+    version="0.1.1",
     description="Library for interacting with Neo4j DB.",
     long_description=None,
     long_description_content_type=None,
@@ -23,7 +23,8 @@ setup(
             "pluggy~=1.5",
             "pylint~=3.2",
             "pytest~=8.2",
-            "pytest-mock~=3.14"
+            "pytest-mock~=3.14",
+            "pytest-cov~=5.0"
         ],
     },
     python_requires=">=3.10",

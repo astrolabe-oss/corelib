@@ -1,0 +1,6 @@
+[run]
+source = corelib
+omit = */.venv/*, */tests/*
+
+[report]
+fail_under = 70
