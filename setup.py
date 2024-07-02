@@ -21,7 +21,7 @@ setup(
     extras_require={
         "test": [
             "pluggy~=1.5",
-            "pylint~=3.2",
+            "prospector~=1.2",
             "pytest~=8.2",
             "pytest-mock~=3.14",
             "pytest-cov~=5.0"

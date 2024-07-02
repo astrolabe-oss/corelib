@@ -7,14 +7,16 @@ import datetime
 
 from corelib.platdb import Insights, PlatDBNode, StructuredNode
 
+
 def test_delete_by_attributes_object_does_not_exist(mocker):
     mock_nodes = mocker.patch.object(StructuredNode, "nodes")
-    attributes = {"name" : "nonexistant" }
+    attributes = {"name": "nonexistant"}
     mock_nodes.get.side_effect = PlatDBNode.DoesNotExist(msg=None)
 
     result = PlatDBNode.delete_by_attributes(attributes=attributes)
 
     assert result is False
+
 
 def test_delete_by_attributes_object_exists(mocker):
     attributes = {}
@@ -34,10 +36,11 @@ def test_delete_by_attributes_object_exists(mocker):
     mock_delete.assert_called_once()
     assert result is True
 
+
 def test_update_object_does_not_exist(mocker):
     # Attributes are really just placeholders
-    attributes = {"name" : "app1" }
-    new_attributes = {"name" : "new_app1" }
+    attributes = {"name": "app1"}
+    new_attributes = {"name": "new_app1"}
 
     mock_nodes = mocker.patch.object(StructuredNode, "nodes")
     mock_nodes.get.side_effect = PlatDBNode.DoesNotExist(msg=None)
@@ -46,10 +49,11 @@ def test_update_object_does_not_exist(mocker):
 
     assert result is None
 
+
 def test_update_object_exists(mocker):
     # Attributes are just placeholders
-    attributes = {"name" : "app1", "data" : 5, "relationship" : "app2"}
-    new_attributes = {"name" : "new_app1", "data" : 10, "relationship" : "app2"}
+    attributes = {"name": "app1", "data": 5, "relationship": "app2"}
+    new_attributes = {"name": "new_app1", "data": 10, "relationship": "app2"}
 
     mock_obj = mocker.Mock(spec=PlatDBNode)
     mock_obj.name = "app1"
@@ -67,6 +71,7 @@ def test_update_object_exists(mocker):
     assert obj.data != 5
     assert obj.data == 10
     assert obj.relationship == "app2"
+
 
 def test_insights_save(mocker):
     insight = Insights()

@@ -19,16 +19,16 @@ params = [
     (Application, {"name": "app1"}, {"name": "new_app1"}),
     (CDN, {"name": "cdn1"}, {"name": "new_cdn1"}),
     (Compute, {
-        "platform" : "ec2",
-        "address" : "1.2.3.4",
-        "protocol" : "TCP",
-        "protocol_multiplexor" : "80"
+        "platform": "ec2",
+        "address": "1.2.3.4",
+        "protocol": "TCP",
+        "protocol_multiplexor": "80"
     }, {
         "name": "new_compute1",
-        "platform" : "k8s",
-        "address" : "pod-1234nv",
-        "protocol" : "HTTP",
-        "protocol_multiplexor" : "80"
+        "platform": "k8s",
+        "address": "pod-1234nv",
+        "protocol": "HTTP",
+        "protocol_multiplexor": "80"
     }),
     (Deployments, {
         "deployment_type": "auto_scaling_group"
@@ -56,6 +56,7 @@ params = [
     })
 ]
 
+
 @pytest.fixture(scope="module")
 def neo4j_connection():
     uri = "bolt://localhost:7687"
@@ -66,11 +67,13 @@ def neo4j_connection():
     yield driver
     driver.close()
 
+
 @pytest.fixture(scope="module", autouse=True)
 def clear_database(neo4j_connection):
     db.cypher_query("MATCH (n) DETACH DELETE n")
     yield
     db.cypher_query("MATCH (n) DETACH DELETE n")
+
 
 @pytest.fixture(scope="module", params=params)
 def create_fixture(neo4j_connection, request):
@@ -78,11 +81,13 @@ def create_fixture(neo4j_connection, request):
     obj = cls(**attributes).save()
     return obj, cls, attributes, new_name
 
+
 def test_create(create_fixture):
     obj, _, attributes, _ = create_fixture
 
     for key, value in attributes.items():
         assert getattr(obj, key) == value
+
 
 def test_read(create_fixture):
     _, cls, attributes, _ = create_fixture
@@ -91,6 +96,7 @@ def test_read(create_fixture):
 
     for key, value in attributes.items():
         assert getattr(read_obj, key) == value
+
 
 def test_update(create_fixture):
     _, cls, attributes, new_attributes = create_fixture
@@ -102,10 +108,12 @@ def test_update(create_fixture):
     for key, value in new_attributes.items():
         assert getattr(updated_obj, key) == value
 
+
 def test_delete(create_fixture):
     _, cls, _, new_attributes = create_fixture
 
     assert cls.delete_by_attributes(attributes=new_attributes) is True
+
 
 if __name__ == "__main__":
     pytest.main()

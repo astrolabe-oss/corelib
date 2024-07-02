@@ -5,15 +5,10 @@ DOCKER_COMPOSE=docker-compose \
 PYTEST=pytest
 
 lint:
-	@pylint corelib/
-
-lint_tests:
-	@pylint tests/
-
-lint_all: lint lint_tests
+	@prospector --profile ../.prospector.yaml $(filter-out $@,$(MAKECMDGOALS))
 
 coverage:
-	$(PYTEST) --cov --cov-config .coveragerc ./tests/unit
+	$(PYTEST) --cov --cov-config ../.coveragerc ./tests/unit
 
 test: unit_tests 
 	@echo "NOTE test only runs unit tests."
