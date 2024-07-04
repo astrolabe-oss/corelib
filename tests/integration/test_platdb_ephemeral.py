@@ -10,12 +10,7 @@ from corelib.platdb import (Neo4jConnection, Application, CDN, Compute,
 # DB connection objects that were yielded to the function.
 # pylint: disable=unused-argument
 
-# Pylint seems to be giving this error because the names of the fixtures
-# are then reused as parameter names later, but that is how they have to
-# be used...
-# pylint: disable=redefined-outer-name
-
-params = [
+neo4j_db_fixtures = [
     (Application, {"name": "app1"}, {"name": "new_app1"}),
     (CDN, {"name": "cdn1"}, {"name": "new_cdn1"}),
     (Compute, {
@@ -68,52 +63,54 @@ def neo4j_connection():
     driver.close()
 
 
-@pytest.fixture(scope="module", autouse=True)
+@pytest.fixture(autouse=True)
 def clear_database(neo4j_connection):
     db.cypher_query("MATCH (n) DETACH DELETE n")
     yield
     db.cypher_query("MATCH (n) DETACH DELETE n")
 
 
-@pytest.fixture(scope="module", params=params)
-def create_fixture(neo4j_connection, request):
-    cls, attributes, new_name = request.param
-    obj = cls(**attributes).save()
-    return obj, cls, attributes, new_name
+@pytest.mark.parametrize('neomodel_class, create_attrs, update_attrs', neo4j_db_fixtures)
+def test_create(neomodel_class, create_attrs, update_attrs):
+    # arrange/act
+    obj = neomodel_class(**create_attrs).save()
 
-
-def test_create(create_fixture):
-    obj, _, attributes, _ = create_fixture
-
-    for key, value in attributes.items():
+    # assert
+    for key, value in create_attrs.items():
         assert getattr(obj, key) == value
 
 
-def test_read(create_fixture):
-    _, cls, attributes, _ = create_fixture
+@pytest.mark.parametrize('neomodel_class, create_attrs, update_attrs', neo4j_db_fixtures)
+def test_read(neomodel_class, create_attrs, update_attrs):
+    # arrange
+    neomodel_class(**create_attrs).save()
 
-    read_obj = cls.nodes.get(**attributes)
+    # act
+    read_obj = neomodel_class.nodes.get(**create_attrs)
 
-    for key, value in attributes.items():
+    # assert
+    for key, value in create_attrs.items():
         assert getattr(read_obj, key) == value
 
 
-def test_update(create_fixture):
-    _, cls, attributes, new_attributes = create_fixture
-    key = list(attributes.keys())[0]
+@pytest.mark.parametrize('neomodel_class, create_attrs, update_attrs', neo4j_db_fixtures)
+def test_update(neomodel_class, create_attrs, update_attrs):
+    # arrange
+    neomodel_class(**create_attrs).save()
 
-    updated_obj = cls.update(attributes, new_attributes)
+    # act
+    updated_obj = neomodel_class.update(create_attrs, update_attrs)
+
+    # assert
     assert updated_obj is not None
-
-    for key, value in new_attributes.items():
+    for key, value in update_attrs.items():
         assert getattr(updated_obj, key) == value
 
 
-def test_delete(create_fixture):
-    _, cls, _, new_attributes = create_fixture
+@pytest.mark.parametrize('neomodel_class, create_attrs, update_attrs', neo4j_db_fixtures)
+def test_delete(neomodel_class, create_attrs, update_attrs):
+    # arrange
+    neomodel_class(**create_attrs).save()
 
-    assert cls.delete_by_attributes(attributes=new_attributes) is True
-
-
-if __name__ == "__main__":
-    pytest.main()
+    # act
+    assert neomodel_class.delete_by_attributes(attributes=create_attrs)

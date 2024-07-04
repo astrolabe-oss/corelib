@@ -10,10 +10,8 @@ lint:
 coverage:
 	$(PYTEST) --cov --cov-config ../.coveragerc ./tests/unit
 
-test: unit_tests 
+test:
 	@echo "NOTE test only runs unit tests."
-
-unit_tests:
 	$(PYTEST) tests/unit
 
 test_env_up:
@@ -25,7 +23,7 @@ test_env_down:
 	$(DOCKER_COMPOSE) down 
 
 integration_tests:
-	@if [ -z "$($(DOCKER_COMPOSE) ps -q neo4j)" ]; then \
+	@if [ -z "$$($(DOCKER_COMPOSE) ps -q neo4j)" ]; then \
 		echo "Neo4j container is not running..."; \
 		echo "Turn it on with 'make test_env_up'"; \
 		exit 1; \

@@ -9,16 +9,20 @@ from corelib.platdb import Insights, PlatDBNode, StructuredNode
 
 
 def test_delete_by_attributes_object_does_not_exist(mocker):
+    # arrange
     mock_nodes = mocker.patch.object(StructuredNode, "nodes")
     attributes = {"name": "nonexistant"}
     mock_nodes.get.side_effect = PlatDBNode.DoesNotExist(msg=None)
 
+    # act
     result = PlatDBNode.delete_by_attributes(attributes=attributes)
 
+    # assert
     assert result is False
 
 
 def test_delete_by_attributes_object_exists(mocker):
+    # arrange
     attributes = {}
 
     mock_obj = mocker.Mock(spec=PlatDBNode)
@@ -31,54 +35,63 @@ def test_delete_by_attributes_object_exists(mocker):
     mock_delete = mocker.patch.object(StructuredNode, "delete",
                                       return_value=True)
 
+    # act
     result = PlatDBNode.delete_by_attributes(attributes=attributes)
 
+    # assert
     mock_delete.assert_called_once()
     assert result is True
 
 
 def test_update_object_does_not_exist(mocker):
-    # Attributes are really just placeholders
+    # arrange
     attributes = {"name": "app1"}
     new_attributes = {"name": "new_app1"}
 
     mock_nodes = mocker.patch.object(StructuredNode, "nodes")
     mock_nodes.get.side_effect = PlatDBNode.DoesNotExist(msg=None)
 
+    # act
     result = PlatDBNode.update(attributes, new_attributes)
 
+    # assert
     assert result is None
 
 
 def test_update_object_exists(mocker):
-    # Attributes are just placeholders
-    attributes = {"name": "app1", "data": 5, "relationship": "app2"}
-    new_attributes = {"name": "new_app1", "data": 10, "relationship": "app2"}
+    # arrange
+    name_orig, data_orig, rel_orig = "app1", 5, "app2"
+    name_update, data_update, rel_update = "app1", 10, "app10"
+    node_orig = {"name": name_orig, "data": data_orig, "relationship": rel_orig}
+    node_update = {"name": name_update, "data": data_update, "relationship": rel_update}
 
     mock_obj = mocker.Mock(spec=PlatDBNode)
-    mock_obj.name = "app1"
-    mock_obj.data = 5
-    mock_obj.relationship = "app2"
+    mock_obj.name = name_orig
+    mock_obj.data = data_orig
+    mock_obj.relationship = rel_orig
     mock_obj.save.side_effect = lambda x: None
 
     mock_nodes = mocker.patch.object(StructuredNode, "nodes")
     mock_nodes.get.side_effect = mock_obj
 
-    obj = PlatDBNode.update(attributes, new_attributes)
+    # act
+    obj = PlatDBNode.update(node_orig, node_update)
 
-    assert obj.name != "app1"
-    assert obj.name == "new_app1"
-    assert obj.data != 5
-    assert obj.data == 10
-    assert obj.relationship == "app2"
+    # assert
+    assert obj.name == name_update
+    assert obj.data == data_update
+    assert obj.relationship == rel_update
 
 
 def test_insights_save(mocker):
+    # arrange
     insight = Insights()
     mocker.patch.object(PlatDBNode, "save")
 
+    # act
     insight.save()
 
+    # assert
     assert isinstance(insight.updated, datetime.datetime)
     assert isinstance(insight.updated.year, int)
     assert isinstance(insight.updated.month, int)
