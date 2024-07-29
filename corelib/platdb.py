@@ -72,12 +72,12 @@ class Application(PlatDBNode):
     insights = RelationshipFrom('Insights', 'APPLIES_TO')
     repo = RelationshipFrom('Repo', 'STORES')
     resources = RelationshipTo('Resource', 'USES')
-    traffic_controllers = RelationshipTo('TrafficControllers', 'DEPENDS_ON')
+    traffic_controllers = RelationshipTo('TrafficController', 'DEPENDS_ON')
 
 
 class CDN(PlatDBNode):
     name = StringProperty()
-    traffic_controllers = RelationshipTo('TrafficControllers', 'DEPENDS_ON')
+    traffic_controllers = RelationshipTo('TrafficController', 'DEPENDS_ON')
 
 
 class Compute(PlatDBNode):
@@ -87,17 +87,23 @@ class Compute(PlatDBNode):
     protocol_multiplexor = StringProperty(required=True)
 
     name = StringProperty()
-    applications = RelationshipTo('Application', 'RUNS')
     compute_to = RelationshipTo('Compute', 'CALLS')
     compute_from = RelationshipFrom('Compute', 'CALLED_BY')
+    applications = RelationshipTo('Application', 'RUNS')
+    deployments = RelationshipTo('Deployment', 'PROVIDES')
 
 
-class Deployments(PlatDBNode):
+class Deployment(PlatDBNode):
+    name = StringProperty(unique_index=True)
     deployment_type = StringProperty(choices={
         "auto_scaling_group": "Auto Scaling Group",
         "target_group": "Target Group",
         "k8s_deployment": "K8s Deployment"})
-    applications = RelationshipTo('Application', 'PROVIDE')
+    traffic_controllers = RelationshipTo('TrafficController', 'PROVIDES')
+    computes = RelationshipTo('Compute', 'USES')
+    address = StringProperty(required=True)
+    protocol = StringProperty(required=True)
+    protocol_multiplexor = StringProperty(required=True)
 
 
 class EgressController(PlatDBNode):
@@ -141,10 +147,17 @@ class Repo(PlatDBNode):
 
 class Resource(PlatDBNode):
     name = StringProperty()
-    applications = RelationshipFrom('Application', 'USES')
+    applications = RelationshipFrom('Application', 'USED_BY')
+    address = StringProperty(required=True)
+    protocol = StringProperty(required=True)
+    protocol_multiplexor = StringProperty(required=True)
 
 
-class TrafficControllers(PlatDBNode):
+class TrafficController(PlatDBNode):
+    name = StringProperty(unique_index=True)
     access_names = StringProperty()
-    deployments = RelationshipTo('Deployments', 'DEPENDS_ON')
-    applications = RelationshipFrom('Application', 'PROVIDE')
+    deployments = RelationshipTo('Deployment', 'USED_BY')
+    applications = RelationshipFrom('Application', 'CALLED_BY')
+    address = StringProperty(required=True)
+    protocol = StringProperty(required=True)
+    protocol_multiplexor = StringProperty(required=True)

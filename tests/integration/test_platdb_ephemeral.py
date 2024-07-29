@@ -3,8 +3,8 @@ import pytest
 from neomodel import db
 
 from corelib.platdb import (Neo4jConnection, Application, CDN, Compute,
-                            Deployments, EgressController, Insights, Repo,
-                            Resource, TrafficControllers)
+                            Deployment, EgressController, Insights, Repo,
+                            Resource, TrafficController)
 
 # Neo4jConnection seem like they are unused arguments but they are the
 # DB connection objects that were yielded to the function.
@@ -25,10 +25,16 @@ neo4j_db_fixtures = [
         "protocol": "HTTP",
         "protocol_multiplexor": "80"
     }),
-    (Deployments, {
-        "deployment_type": "auto_scaling_group"
+    (Deployment, {
+        "deployment_type": "auto_scaling_group",
+        "address": "1.2.3.4",
+        "protocol": "TCP",
+        "protocol_multiplexor": "80"
     }, {
-        "deployment_type": "target_group"
+        "deployment_type": "target_group",
+        "address": "5.6.7.8",
+        "protocol": "HTTP",
+        "protocol_multiplexor": "443"
     }),
     (EgressController, {"name": "egress1"}, {"name": "new_egress1"}),
     (Insights, {
@@ -43,11 +49,27 @@ neo4j_db_fixtures = [
         "upgraded_state": "new_state2"
     }),
     (Repo, {"name": "repo1"}, {"name": "new_repo1"}),
-    (Resource, {"name": "resource1"}, {"name": "new_resource1"}),
-    (TrafficControllers, {
-        "access_names": "access1"
+    (Resource, {
+        "name": "resource1",
+        "address": "1.2.3.4",
+        "protocol": "TCP",
+        "protocol_multiplexor": "80"
     }, {
-        "access_names": "new_access1"
+        "name": "new_resource1",
+        "address": "5.6.7.8",
+        "protocol": "HTTP",
+        "protocol_multiplexor": "443"
+    }),
+    (TrafficController, {
+        "access_names": "access1",
+        "address": "1.2.3.4",
+        "protocol": "TCP",
+        "protocol_multiplexor": "80"
+    }, {
+        "access_names": "new_access1",
+        "address": "5.6.7.8",
+        "protocol": "HTTP",
+        "protocol_multiplexor": "443"
     })
 ]
 
