@@ -1,95 +1,10 @@
 import pytest
 
-from neomodel import db
-
-from corelib.platdb import (Neo4jConnection, Application, CDN, Compute,
-                            Deployment, EgressController, Insights, Repo,
-                            Resource, TrafficController)
+from tests.conftest import neo4j_db_fixtures
 
 # Neo4jConnection seem like they are unused arguments but they are the
 # DB connection objects that were yielded to the function.
 # pylint: disable=unused-argument
-
-neo4j_db_fixtures = [
-    (Application, {"name": "app1"}, {"name": "new_app1"}),
-    (CDN, {"name": "cdn1"}, {"name": "new_cdn1"}),
-    (Compute, {
-        "platform": "ec2",
-        "address": "1.2.3.4",
-        "protocol": "TCP",
-        "protocol_multiplexor": "80"
-    }, {
-        "name": "new_compute1",
-        "platform": "k8s",
-        "address": "pod-1234nv",
-        "protocol": "HTTP",
-        "protocol_multiplexor": "80"
-    }),
-    (Deployment, {
-        "deployment_type": "auto_scaling_group",
-        "address": "1.2.3.4",
-        "protocol": "TCP",
-        "protocol_multiplexor": "80"
-    }, {
-        "deployment_type": "target_group",
-        "address": "5.6.7.8",
-        "protocol": "HTTP",
-        "protocol_multiplexor": "443"
-    }),
-    (EgressController, {"name": "egress1"}, {"name": "new_egress1"}),
-    (Insights, {
-        "attribute_name": "attr1",
-        "recommendation": "recommendation1",
-        "starting_state": "state1",
-        "upgraded_state": "state2"
-    }, {
-        "attribute_name": "new_attr1",
-        "recommendation": "new_recommendation1",
-        "starting_state": "new_state1",
-        "upgraded_state": "new_state2"
-    }),
-    (Repo, {"name": "repo1"}, {"name": "new_repo1"}),
-    (Resource, {
-        "name": "resource1",
-        "address": "1.2.3.4",
-        "protocol": "TCP",
-        "protocol_multiplexor": "80"
-    }, {
-        "name": "new_resource1",
-        "address": "5.6.7.8",
-        "protocol": "HTTP",
-        "protocol_multiplexor": "443"
-    }),
-    (TrafficController, {
-        "access_names": "access1",
-        "address": "1.2.3.4",
-        "protocol": "TCP",
-        "protocol_multiplexor": "80"
-    }, {
-        "access_names": "new_access1",
-        "address": "5.6.7.8",
-        "protocol": "HTTP",
-        "protocol_multiplexor": "443"
-    })
-]
-
-
-@pytest.fixture(scope="module")
-def neo4j_connection():
-    uri = "bolt://localhost:7687"
-    username = "neo4j"
-    password = "guruai11"
-    driver = Neo4jConnection(uri=uri, auth=(username, password))
-    driver.open()
-    yield driver
-    driver.close()
-
-
-@pytest.fixture(autouse=True)
-def clear_database(neo4j_connection):
-    db.cypher_query("MATCH (n) DETACH DELETE n")
-    yield
-    db.cypher_query("MATCH (n) DETACH DELETE n")
 
 
 @pytest.mark.parametrize('neomodel_class, create_attrs, update_attrs', neo4j_db_fixtures)
@@ -136,3 +51,41 @@ def test_delete(neomodel_class, create_attrs, update_attrs):
 
     # act
     assert neomodel_class.delete_by_attributes(attributes=create_attrs)
+
+
+def test_get_full_graph_as_json(mocker, mock_complex_graph, neo4j_connection):
+    mock_create_platdb_ht = mocker.patch.object(
+        neo4j_connection, 
+        '_create_platdb_ht',
+        side_effect=neo4j_connection._create_platdb_ht)  # pylint: disable=protected-access
+
+    vertices, edges = neo4j_connection.get_full_graph_as_json()
+
+    # The number is 4 because that is how many vertices are in mock_complex_graph
+    assert mock_create_platdb_ht.call_count == 4
+
+    for edge in edges:
+        start = edge['start_node']
+        dest = edge['end_node']
+        v_type = edge['type']
+
+        assert start in vertices
+        assert dest in vertices
+
+        if v_type == 'RUNS':
+            assert vertices[start]['type'] == 'Compute'
+            assert vertices[dest]['type'] == 'Application'
+
+            if vertices[start]['name'] == 'compute1':
+                assert vertices[dest]['name'] == 'app1'
+
+            if vertices[start]['name'] == 'compute2':
+                assert vertices[dest]['name'] == 'app2'
+
+        if v_type == 'CALLS':
+            assert vertices[start]['name'] == 'app1'
+            assert vertices[dest]['name'] == 'app2'
+
+        if v_type == 'CALLED BY':
+            assert vertices[start]['name'] == 'app2'
+            assert vertices[dest]['name'] == 'app1'

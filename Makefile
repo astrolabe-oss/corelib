@@ -10,6 +10,8 @@ lint:
 coverage:
 	$(PYTEST) --cov --cov-config ../.coveragerc ./tests/unit
 
+test_all: test integration_tests
+
 test:
 	@echo "NOTE test only runs unit tests."
 	$(PYTEST) tests/unit

@@ -1,11 +1,23 @@
 import datetime
+import importlib
 
-from typing import Optional
+from typing import Any, Optional
+
+import neo4j
 
 from neo4j import GraphDatabase
-from neomodel import (db, DoesNotExist, DateTimeProperty, FloatProperty,
-                      RelationshipFrom, RelationshipTo, StringProperty,
-                      StructuredNode)
+from neomodel import (
+    DoesNotExist,
+    DateTimeProperty,
+    FloatProperty,
+    RelationshipFrom,
+    RelationshipTo,
+    StringProperty,
+    StructuredNode,
+    db
+)
+
+from neomodel.properties import Property
 
 
 class Neo4jConnection:
@@ -34,6 +46,60 @@ class Neo4jConnection:
     def close(self):
         self._driver.close()
 
+    def get_full_graph_as_json(self) -> tuple[dict, list]:  
+        vertices = {}
+        edges = []
+        platdb_module = importlib.import_module('corelib.platdb')
+
+        results, _ = db.cypher_query(
+            """
+            MATCH (parent)-[edge]->(child) 
+            RETURN 
+                parent, labels(parent) AS parent_type, 
+                edge, type(edge) AS edge_type, 
+                child, labels(child) AS child_type
+            """
+        )
+
+        for row in results:
+            parent, parent_type, edge, edge_type, child, child_type = row
+            parent_type = parent_type[0]
+            child_type = child_type[0]
+
+            if parent.element_id not in vertices:
+                vertices[parent.element_id] = self._create_platdb_ht(
+                    platdb_module=platdb_module,
+                    platdb_type=parent_type,
+                    vertex=parent)
+
+            if child.element_id not in vertices:
+                vertices[child.element_id] = self._create_platdb_ht(
+                    platdb_module=platdb_module,
+                    platdb_type=child_type,
+                    vertex=child)
+
+            edges.append({
+                "start_node": parent.element_id,
+                "end_node": child.element_id,
+                "type": edge_type,
+                "properties": dict(edge)
+            })
+
+        return vertices, edges
+
+    def _create_platdb_ht(
+            self, 
+            platdb_module: Any, 
+            platdb_type: str, 
+            vertex: neo4j.graph.Node
+    ) -> dict:
+        platdb_cls = getattr(platdb_module, platdb_type)
+        platdb_obj = platdb_cls.inflate(vertex)
+        platdb_ht = platdb_obj.platdbnode_to_dict()
+        platdb_ht['type'] = platdb_type
+
+        return platdb_ht
+
 
 class PlatDBNode(StructuredNode):
     __abstract_node__ = True  # prevents neo4j from adding `PlatDBNode` as a "label" in the graph db
@@ -60,6 +126,21 @@ class PlatDBNode(StructuredNode):
             return obj
         except DoesNotExist:
             return None
+
+    def platdbnode_to_dict(self):
+        data = {}
+
+        for attr in dir(self):
+            obj_attr = getattr(self.__class__, attr, None)
+
+            # Only want to keep neomodel Property objects and Relationships
+            # Any other attribute present in the object should be ignored
+            if isinstance(obj_attr, Property):
+                data[attr] = getattr(self, attr)
+            elif isinstance(obj_attr, (RelationshipTo, RelationshipFrom)):
+                data[attr] = [rel.element_id for rel in getattr(self, attr).all()]
+
+        return data
 
 
 class Application(PlatDBNode):

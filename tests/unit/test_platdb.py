@@ -1,9 +1,19 @@
-"""Need to disable this for the DoesNotExist exceptions. I think the 
-neomodels work by creating this dynamically so pylint does not really 
-deal with it right."""
+# Need to disable this for the DoesNotExist exceptions. I think the 
+# neomodels work by creating this dynamically so pylint does not really 
+# deal with it right.
 # pylint: disable=no-member
 
+# Neo4jConnection seem like they are unused arguments but they are the
+# DB connection objects that were yielded to the function.
+# pylint: disable=unused-argument
+
 import datetime
+
+import pytest
+
+from neomodel import ZeroOrMore
+
+from tests.conftest import neo4j_db_fixtures
 
 from corelib.platdb import Insights, PlatDBNode, StructuredNode
 
@@ -97,3 +107,21 @@ def test_insights_save(mocker):
     assert isinstance(insight.updated.month, int)
     assert isinstance(insight.updated.day, int)
     assert insight.updated.tzinfo is datetime.timezone.utc
+
+
+@pytest.mark.parametrize('cls,attrs,updated_attrs', neo4j_db_fixtures)
+def test_platdb_node_to_dict_for_all_classes(mocker, cls, attrs, updated_attrs):
+    obj = cls(**attrs)
+    rel = []
+
+    mocker.patch.object(ZeroOrMore, 'all', return_value=rel)
+
+    platdb_ht = obj.platdbnode_to_dict()
+
+    for key, value in platdb_ht.items():
+        if key in attrs:
+            assert value == attrs[key]
+        elif key in attrs:
+            # This could be a relationship or a None object if it was a 
+            # class value that was left blank
+            assert value in (rel, None), f'key: {key}, value: {value}'
