@@ -7,6 +7,7 @@ import neo4j
 
 from neo4j import GraphDatabase
 from neomodel import (
+    ArrayProperty,
     DoesNotExist,
     DateTimeProperty,
     FloatProperty,
@@ -103,6 +104,8 @@ class Neo4jConnection:
 
 class PlatDBNode(StructuredNode):
     __abstract_node__ = True  # prevents neo4j from adding `PlatDBNode` as a "label" in the graph db
+    profile_timestamp: Optional[datetime.datetime] = DateTimeProperty()
+    profile_lock_time: Optional[datetime.datetime] = DateTimeProperty()
 
     @classmethod
     def delete_by_attributes(cls, attributes: dict) -> bool:
@@ -162,10 +165,11 @@ class CDN(PlatDBNode):
 
 
 class Compute(PlatDBNode):
-    platform = StringProperty(required=True)
     address = StringProperty(required=True)
-    protocol = StringProperty(required=True)
-    protocol_multiplexor = StringProperty(required=True)
+
+    platform = StringProperty()
+    protocol = StringProperty()
+    protocol_multiplexor = StringProperty()
 
     name = StringProperty()
     compute_to = RelationshipTo('Compute', 'CALLS')
@@ -227,18 +231,38 @@ class Repo(PlatDBNode):
 
 
 class Resource(PlatDBNode):
-    name = StringProperty()
+    address = StringProperty()
     applications = RelationshipFrom('Application', 'USED_BY')
-    address = StringProperty(required=True)
-    protocol = StringProperty(required=True)
-    protocol_multiplexor = StringProperty(required=True)
+    dns_names = ArrayProperty(StringProperty())
+    name = StringProperty()
+    protocol = StringProperty()
+    protocol_multiplexor = StringProperty()
 
+    @classmethod
+    def create_or_update(cls, data):
+        dns_names = data.get('dns_names', [])
+
+        if dns_names:
+            existing_resource = cls.nodes.filter(dns_names=dns_names).first()
+
+            if existing_resource:
+                # TODO loop through existing resources
+                for k, v in data.items():
+                    setattr(existing_resource, k, v)
+
+                existing_resource.save()
+                return [existing_resource]
+
+        new_resource = cls(**data)
+        new_resource.save()
+
+        return [new_resource]
 
 class TrafficController(PlatDBNode):
-    name = StringProperty(unique_index=True)
-    access_names = StringProperty()
-    deployments = RelationshipTo('Deployment', 'USED_BY')
+    address = StringProperty()
     applications = RelationshipFrom('Application', 'CALLED_BY')
-    address = StringProperty(required=True)
-    protocol = StringProperty(required=True)
-    protocol_multiplexor = StringProperty(required=True)
+    deployments = RelationshipTo('Deployment', 'USED_BY')
+    dns_names = ArrayProperty(StringProperty())
+    name = StringProperty(unique_index=True)
+    protocol = StringProperty()
+    protocol_multiplexor = StringProperty()

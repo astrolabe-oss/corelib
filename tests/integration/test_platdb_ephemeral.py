@@ -1,3 +1,5 @@
+import datetime
+import neo4j
 import pytest
 
 from tests.conftest import neo4j_db_fixtures
@@ -89,3 +91,25 @@ def test_get_full_graph_as_json(mocker, mock_complex_graph, neo4j_connection):
         if v_type == 'CALLED BY':
             assert vertices[start]['name'] == 'app2'
             assert vertices[dest]['name'] == 'app1'
+
+@pytest.mark.parametrize('cls,orig_attrs,updated_attrs', neo4j_db_fixtures)
+def test_platdb_time_attrs(cls, orig_attrs, updated_attrs):
+    """This function is for testing the PlatDB attrs which are inherited 
+    by the other neomodel classes. This could have maybe been added to one 
+    of the other test functions like test_read(), but this seemed easier.
+    """
+    attrs = orig_attrs.copy()
+    time_now = datetime.datetime.now(datetime.timezone.utc)
+    attrs['profile_timestamp'] = time_now
+    attrs['profile_lock_time'] = time_now
+
+    # This attr should not get written to the DB because it is not specified
+    # in any of the neomodel classes.
+    attrs['missing_attr'] = 'Should not end up in DB'
+
+    cls(**attrs).save()
+    read_obj = cls.nodes.get(**orig_attrs)
+
+    assert read_obj.profile_timestamp == time_now
+    assert read_obj.profile_lock_time == time_now
+    assert hasattr(read_obj, 'missing_attr') is False
