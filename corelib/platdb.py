@@ -146,6 +146,53 @@ class PlatDBNode(StructuredNode):
         return data
 
 
+class PlatDBDNSNode(PlatDBNode):
+    __abstract_node__ = True
+    dns_names = ArrayProperty(StringProperty(), unique_index=True, null=True)
+
+    @classmethod
+    def create_or_update(cls, data):
+        """For Ressouce types, sometimes we have the address and not the dns names, sometimes we have the dns_names and
+             not the address.  However, address:dns_names is a natural unique key.  So we cannot specity unique and null
+             in neomodel - so as you see here we create that constraint programitcally in the application layer"""
+        # MUST HAVE ADDRESS OR DNS_NAMES
+        address = data.get('address', None)
+        dns_names = data.get('dns_names', [])
+        if not address and not dns_names:
+            raise Exception('neomodel Resource type must have either address or dns_names fields set to save!')
+
+        # TRY TO FIND BY ADDRESS
+        existing_resource = None
+        if address:
+            try:
+                existing_resource = cls.nodes.get(address=address)
+            except DoesNotExist:
+                pass
+
+        # IF NOT, TRY TO FIND BY DNS_NAMES
+        if not existing_resource:
+            # This is garbage, no current way to run this query in neomodel!  https://github.com/neo4j-contrib/neomodel/issues/379
+            all_resources = cls.nodes.all()
+            if len(all_resources) > 0:
+                for resource in all_resources:
+                    if True in [dns_name in resource.dns_names for dns_name in dns_names]:
+                        existing_resource = resource
+                        continue
+
+        # IF NOT, MUST BE A NEW RESOURCE TO INSERT!
+        if not existing_resource:
+            new_resource = cls(**data)
+            new_resource.save()
+            return [new_resource]
+
+        # OTHERWISE, "UPDATE" EXISTING
+        for k, v in data.items():
+            setattr(existing_resource, k, v)
+
+        existing_resource.save()
+        return [existing_resource]
+
+
 class Application(PlatDBNode):
     name = StringProperty(unique_index=True)
 
@@ -230,39 +277,18 @@ class Repo(PlatDBNode):
     applications = RelationshipTo('Application', 'STORES')
 
 
-class Resource(PlatDBNode):
-    address = StringProperty()
+class Resource(PlatDBDNSNode):
+    address = StringProperty(unique_index=True, null=True)
     applications = RelationshipFrom('Application', 'USED_BY')
-    dns_names = ArrayProperty(StringProperty())
     name = StringProperty()
     protocol = StringProperty()
     protocol_multiplexor = StringProperty()
 
-    @classmethod
-    def create_or_update(cls, data):
-        dns_names = data.get('dns_names', [])
 
-        if dns_names:
-            existing_resource = cls.nodes.filter(dns_names=dns_names).first()
-
-            if existing_resource:
-                # TODO loop through existing resources
-                for k, v in data.items():
-                    setattr(existing_resource, k, v)
-
-                existing_resource.save()
-                return [existing_resource]
-
-        new_resource = cls(**data)
-        new_resource.save()
-
-        return [new_resource]
-
-class TrafficController(PlatDBNode):
+class TrafficController(PlatDBDNSNode):
     address = StringProperty()
     applications = RelationshipFrom('Application', 'CALLED_BY')
     deployments = RelationshipTo('Deployment', 'USED_BY')
-    dns_names = ArrayProperty(StringProperty())
     name = StringProperty(unique_index=True)
     protocol = StringProperty()
     protocol_multiplexor = StringProperty()
