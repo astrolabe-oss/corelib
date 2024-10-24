@@ -15,7 +15,8 @@ from neomodel import (
     RelationshipTo,
     StringProperty,
     StructuredNode,
-    db
+    db,
+    Q
 )
 
 from neomodel.properties import Property
@@ -107,6 +108,10 @@ class PlatDBNode(StructuredNode):
     profile_timestamp: Optional[datetime.datetime] = DateTimeProperty()
     profile_lock_time: Optional[datetime.datetime] = DateTimeProperty()
 
+    # Attributes that are being added to maintain the Node obj in Astrolabe
+    profile_strategy_name = StringProperty()
+    provider = StringProperty()
+
     @classmethod
     def delete_by_attributes(cls, attributes: dict) -> bool:
         try:
@@ -175,9 +180,10 @@ class PlatDBDNSNode(PlatDBNode):
             all_resources = cls.nodes.all()
             if len(all_resources) > 0:
                 for resource in all_resources:
-                    if True in [dns_name in resource.dns_names for dns_name in dns_names]:
-                        existing_resource = resource
-                        continue
+                    for dns_name in dns_names:
+                        if resource.dns_names and dns_name in resource.dns_names:
+                            existing_resource = resource 
+                            continue
 
         # IF NOT, MUST BE A NEW RESOURCE TO INSERT!
         if not existing_resource:
