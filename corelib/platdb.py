@@ -7,6 +7,7 @@ import neo4j
 
 from neo4j import GraphDatabase
 from neomodel import (
+    ArrayProperty,
     DoesNotExist,
     DateTimeProperty,
     FloatProperty,
@@ -14,7 +15,8 @@ from neomodel import (
     RelationshipTo,
     StringProperty,
     StructuredNode,
-    db
+    db,
+    Q
 )
 
 from neomodel.properties import Property
@@ -103,6 +105,12 @@ class Neo4jConnection:
 
 class PlatDBNode(StructuredNode):
     __abstract_node__ = True  # prevents neo4j from adding `PlatDBNode` as a "label" in the graph db
+    profile_timestamp: Optional[datetime.datetime] = DateTimeProperty()
+    profile_lock_time: Optional[datetime.datetime] = DateTimeProperty()
+
+    # Attributes that are being added to maintain the Node obj in Astrolabe
+    profile_strategy_name = StringProperty()
+    provider = StringProperty()
 
     @classmethod
     def delete_by_attributes(cls, attributes: dict) -> bool:
@@ -143,6 +151,54 @@ class PlatDBNode(StructuredNode):
         return data
 
 
+class PlatDBDNSNode(PlatDBNode):
+    __abstract_node__ = True
+    dns_names = ArrayProperty(StringProperty(), unique_index=True, null=True)
+
+    @classmethod
+    def create_or_update(cls, data):
+        """For Ressouce types, sometimes we have the address and not the dns names, sometimes we have the dns_names and
+             not the address.  However, address:dns_names is a natural unique key.  So we cannot specity unique and null
+             in neomodel - so as you see here we create that constraint programitcally in the application layer"""
+        # MUST HAVE ADDRESS OR DNS_NAMES
+        address = data.get('address', None)
+        dns_names = data.get('dns_names', [])
+        if not address and not dns_names:
+            raise Exception('neomodel Resource type must have either address or dns_names fields set to save!')
+
+        # TRY TO FIND BY ADDRESS
+        existing_resource = None
+        if address:
+            try:
+                existing_resource = cls.nodes.get(address=address)
+            except DoesNotExist:
+                pass
+
+        # IF NOT, TRY TO FIND BY DNS_NAMES
+        if not existing_resource:
+            # This is garbage, no current way to run this query in neomodel!  https://github.com/neo4j-contrib/neomodel/issues/379
+            all_resources = cls.nodes.all()
+            if len(all_resources) > 0:
+                for resource in all_resources:
+                    for dns_name in dns_names:
+                        if resource.dns_names and dns_name in resource.dns_names:
+                            existing_resource = resource 
+                            continue
+
+        # IF NOT, MUST BE A NEW RESOURCE TO INSERT!
+        if not existing_resource:
+            new_resource = cls(**data)
+            new_resource.save()
+            return [new_resource]
+
+        # OTHERWISE, "UPDATE" EXISTING
+        for k, v in data.items():
+            setattr(existing_resource, k, v)
+
+        existing_resource.save()
+        return [existing_resource]
+
+
 class Application(PlatDBNode):
     name = StringProperty(unique_index=True)
 
@@ -162,10 +218,11 @@ class CDN(PlatDBNode):
 
 
 class Compute(PlatDBNode):
-    platform = StringProperty(required=True)
     address = StringProperty(required=True)
-    protocol = StringProperty(required=True)
-    protocol_multiplexor = StringProperty(required=True)
+
+    platform = StringProperty()
+    protocol = StringProperty()
+    protocol_multiplexor = StringProperty()
 
     name = StringProperty()
     compute_to = RelationshipTo('Compute', 'CALLS')
@@ -226,19 +283,18 @@ class Repo(PlatDBNode):
     applications = RelationshipTo('Application', 'STORES')
 
 
-class Resource(PlatDBNode):
-    name = StringProperty()
+class Resource(PlatDBDNSNode):
+    address = StringProperty(unique_index=True, null=True)
     applications = RelationshipFrom('Application', 'USED_BY')
-    address = StringProperty(required=True)
-    protocol = StringProperty(required=True)
-    protocol_multiplexor = StringProperty(required=True)
+    name = StringProperty()
+    protocol = StringProperty()
+    protocol_multiplexor = StringProperty()
 
 
-class TrafficController(PlatDBNode):
-    name = StringProperty(unique_index=True)
-    access_names = StringProperty()
-    deployments = RelationshipTo('Deployment', 'USED_BY')
+class TrafficController(PlatDBDNSNode):
+    address = StringProperty()
     applications = RelationshipFrom('Application', 'CALLED_BY')
-    address = StringProperty(required=True)
-    protocol = StringProperty(required=True)
-    protocol_multiplexor = StringProperty(required=True)
+    deployments = RelationshipTo('Deployment', 'USED_BY')
+    name = StringProperty(unique_index=True)
+    protocol = StringProperty()
+    protocol_multiplexor = StringProperty()

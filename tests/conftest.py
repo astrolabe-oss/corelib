@@ -59,13 +59,13 @@ neo4j_db_fixtures = [
         "protocol_multiplexor": "443"
     }),
     (TrafficController, {
-        "access_names": "access1",
         "address": "1.2.3.4",
+        "name": "access1",
         "protocol": "TCP",
         "protocol_multiplexor": "80"
     }, {
-        "access_names": "new_access1",
         "address": "5.6.7.8",
+        "name": "new_access1",
         "protocol": "HTTP",
         "protocol_multiplexor": "443"
     })
