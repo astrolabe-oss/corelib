@@ -123,6 +123,7 @@ class PlatDBNode(StructuredNode):
     @classmethod
     def update(cls, attributes: dict, new_attributes: dict
                ) -> Optional["PlatDBNode"]:
+        """TODO: Is this method used anywhere? Defunct?"""
         try:
             obj = cls.nodes.get(**attributes)  # pylint: disable=no-member
 
@@ -134,6 +135,20 @@ class PlatDBNode(StructuredNode):
             return obj
         except DoesNotExist:
             return None
+
+    @classmethod
+    def create_or_update(cls, *props, **kwargs):
+        """We have to do this because apparently neomodel library does not null-out an attribute
+           when you try to update an existing attribute with a None/null replacement!"""
+        instances = super().create_or_update(*props, **kwargs)
+
+        # Check each instance to ensure profile_lock_time is set to None if specified
+        for instance, prop in zip(instances, props):
+            if 'profile_lock_time' in prop and prop['profile_lock_time'] is None:
+                instance.profile_lock_time = None
+                instance.save()  # Persist the explicit None value
+
+        return instances
 
     def platdbnode_to_dict(self):
         data = {}
@@ -155,8 +170,9 @@ class PlatDBDNSNode(PlatDBNode):
     __abstract_node__ = True
     dns_names = ArrayProperty(StringProperty(), unique_index=True, null=True)
 
+    # pylint:disable=arguments-differ
     @classmethod
-    def create_or_update(cls, data):
+    def create_or_update(cls, data):  # NOQA
         """For Ressouce types, sometimes we have the address and not the dns names, sometimes we have the dns_names and
              not the address.  However, address:dns_names is a natural unique key.  So we cannot specity unique and null
              in neomodel - so as you see here we create that constraint programitcally in the application layer"""
@@ -164,6 +180,7 @@ class PlatDBDNSNode(PlatDBNode):
         address = data.get('address', None)
         dns_names = data.get('dns_names', [])
         if not address and not dns_names:
+            # pylint:disable=broad-exception-raised
             raise Exception('neomodel Resource type must have either address or dns_names fields set to save!')
 
         # TRY TO FIND BY ADDRESS
