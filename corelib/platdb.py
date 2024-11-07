@@ -11,6 +11,7 @@ from neomodel import (
     DoesNotExist,
     DateTimeProperty,
     FloatProperty,
+    JSONProperty,
     RelationshipFrom,
     RelationshipTo,
     StringProperty,
@@ -111,6 +112,10 @@ class PlatDBNode(StructuredNode):
     # Attributes that are being added to maintain the Node obj in Astrolabe
     profile_strategy_name = StringProperty()
     provider = StringProperty()
+
+    # New fields to mirror `warnings` and `errors` in Astrolabe Node class
+    profile_warnings = JSONProperty(default={})
+    profile_errors = JSONProperty(default={})
 
     @classmethod
     def delete_by_attributes(cls, attributes: dict) -> bool:
