@@ -1,3 +1,12 @@
+"""
+Module Name: platdb
+
+Description:
+Defines the PlatDB schema for a Neo4J neomodel database, as well as several access methods.
+
+License:
+SPDX-License-Identifier: Apache-2.0
+"""
 import datetime
 import importlib
 
